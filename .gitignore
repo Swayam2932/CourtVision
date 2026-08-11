@@ -1,0 +1,80 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# =========================
+# Virtual Environment
+# =========================
+nba/
+venv/
+env/
+.venv/
+
+# =========================
+# Jupyter
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# macOS
+# =========================
+.DS_Store
+
+# =========================
+# IDE / Editors
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# Environment / Secrets
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Input / Output Videos
+# =========================
+input_videos/
+output_videos/
+
+# =========================
+# Generated / Temporary Files
+# =========================
+stubs/
+runs/
+wandb/
+logs/
+*.log
+
+# =========================
+# Python build files
+# =========================
+build/
+dist/
+*.egg-info/
+
+# =========================
+# Model files
+# =========================
+# Uncomment if model files are too large for GitHub
+# *.pt
+# *.pth
+# *.onnx
+
+# =========================
+# Jupyter / Python artifacts
+# =========================
+*.pkl
+*.pickle
+
+# Model files
+models/

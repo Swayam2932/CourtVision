@@ -100,10 +100,11 @@ class SpeedAndDistanceCalculator():
                     time_in_seconds = frames_present / fps
                     time_in_hours = time_in_seconds / 3600
                     
-                    # Calculate speed in km/h
+                    # Calculate speed in km/h with outlier suppression for tracking teleportation
                     if time_in_hours > 0:
                         speed_kmh = (total_distance / 1000) / time_in_hours
-                        speeds[frame_idx][player_id] = speed_kmh
+                        # Cap at realistic NBA sprint limit (32 km/h) to filter out ID switches
+                        speeds[frame_idx][player_id] = min(32.0, speed_kmh)
                     else:
                         speeds[frame_idx][player_id] = 0
                 else:

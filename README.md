@@ -1,189 +1,237 @@
-# CourtVision
+# CourtVision Pro — Basketball AI Analytics & Tactical Vision
 
-CourtVision is a Python computer-vision pipeline for basketball videos. It detects and tracks players and the ball, estimates which team has possession, identifies passes and interceptions, estimates player speed and distance, and adds a tactical top-down court view to an annotated output video.
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![YOLOv8](https://img.shields.io/badge/YOLO-v8-brightgreen.svg)](https://github.com/ultralytics/ultralytics)
+[![OpenCV](https://img.shields.io/badge/OpenCV-Computer%20Vision-red.svg)](https://opencv.org/)
 
-The project is a command-line application. It processes one input video per run and writes one annotated video.
+**CourtVision Pro** is an end-to-end computer vision and spatial analytics pipeline that converts broadcast basketball video into professional NBA-grade tactical analytics (1080×1350 portrait format).
 
-## What you need
+By combining deep learning object detection, ByteTrack tracking, dynamic camera calibration, homography court transformation, and computational geometry, CourtVision Pro overcomes the challenges of broadcast pan, tilt, zoom, and player occlusions to extract measurable game statistics.
 
-- Python 3.9 (the Docker image uses Python 3.9)
-- The Python packages in `requirements.txt`
-- The three model weight files listed below
-- A basketball video readable by OpenCV/FFmpeg
-- Internet access on the first run if the Hugging Face `fashion-clip` model has not already been cached (used for jersey color/team assignment)
+---
 
-The included detector weights are large (about 728 MB total). They and the sample videos are not stored in the GitHub repository. Download the weights from the [CourtVision Google Drive folder](https://drive.google.com/drive/folders/1GfzD-WVNPAB4aDNuNdy90bXJgHVy3NOH?usp=sharing).
+## 🏀 The Challenge vs The Solution
 
-## 1. Get the project code
+### The Challenge
+Tracking players in broadcast basketball footage is difficult because:
+- **Dynamic Camera Motion**: Cameras pan, tilt, and zoom across the court constantly.
+- **Occlusions & Crowding**: Players cross paths and cluster together in the paint.
+- **Distractions**: Referees, bench players, and courtside fans enter the frame.
+- **Perspective Distortion**: Monocular broadcast cameras distort metric distances, speeds, and team spacing.
 
-Clone the repository and enter its directory:
+### The Solution
+1. **Player & Ball Tracking**: YOLO object detection paired with ByteTrack to track player identities and the basketball continuously.
+2. **Team Identification**: Vision-based jersey classification to cluster players into opposing teams while filtering out referees.
+3. **Dynamic Court Calibration**: Court landmark detection computing per-frame homography matrices to map camera pixels directly to real-world metric coordinates ($28\text{m} \times 15\text{m}$).
+4. **Voronoi Space Control**: Computational geometry partitioning the court into spatial control zones per team and measuring frontcourt dominance.
+5. **Team Spacing & Open Space**: Convex hull area ($m^2$) for offensive and defensive width, alongside average defensive gap distance to nearest defenders.
+6. **NBA Broadcast Graphics**: Composited 1080×1350 portrait presentation with wireframe player poses, speed badges, tactical court mapping, live attacking status, and end-of-possession recaps.
 
+---
+
+## 🚀 Key Features
+
+### 1. Professional Broadcast Composite (1080×1350 Portrait)
+- **Header Banner**: Dark broadcast aesthetic with dynamic team legend capsules (`PHI 76ERS` vs `IND PACERS`).
+- **Enhanced Broadcast Video**: Sits in the upper section with live visual analytics overlays.
+- **Section Divider**: Displays `LIVE TACTICAL VIEW` alongside an automatic live attacking team & direction pill (`IND ATTACKING ←`).
+- **Full-Court Tactical View**: Dark navy regulation 2D court with real-time Voronoi control regions and player dots.
+- **4-Card Analytics Dashboard**: Styled stat cards showing real-time spatial analytics.
+
+### 2. Player Overlays & Pose Analytics
+- **Skeleton Wireframes**: Clean anatomical limb lines and white circular joint nodes rendered directly on players.
+- **Team-Colored Speed Badges**: Floating pills above players displaying real-world running speed (e.g. `13 km/h`), with outlier suppression to filter tracking identity jumps.
+- **Court Foot Rings**: Elliptical base rings on the court surface indicating foot contact position.
+- **Ball Possession Rings**: Pulsing rings around the ball handler.
+
+### 3. Advanced Spatial Analytics
+- **Voronoi Space Control**: Bounded Voronoi diagrams partition the court into team control territories (slate-blue vs warm-gold), calculating the exact percentage of frontcourt controlled.
+- **Team Spacing (Convex Hull $m^2$)**: Real-time convex hull surface area tracking how compressed or spread out each team is.
+- **Offensive Open Space**: Measures the average separation distance in metres between each offensive player and their nearest defender.
+- **Cumulative Distance**: Real-time meters covered per player and team throughout the possession.
+
+### 4. Possession Recap Screen
+- At the end of each possession or clip, an automated dark overlay summarizes:
+  - Total possessions tracked and duration
+  - Team distance covered in metres
+  - Top sprint speed (km/h) and fastest player/team
+  - Offensive frontcourt space control percentage
+  - Average offensive open space gap
+
+---
+
+## 📊 Pipeline Architecture
+
+```mermaid
+flowchart TD
+    Video["Broadcast Video (.mp4 / .avi)"] --> Detectors["YOLO Detection & ByteTrack"]
+    Detectors --> PlayerTrack["Player Tracks & Bounding Boxes"]
+    Detectors --> BallTrack["Ball Tracks & Interpolation"]
+    Video --> CourtKP["Court Keypoint Detector"]
+    
+    PlayerTrack --> TeamAssign["Team Jersey Assigner"]
+    BallTrack & PlayerTrack --> BallPossess["Ball Possession Detector"]
+    
+    CourtKP --> Homography["Dynamic Homography Calibration"]
+    PlayerTrack & Homography --> RealWorldPos["Tactical 2D Metric Positions (28m x 15m)"]
+    
+    RealWorldPos --> SpeedDist["Speed & Distance Calculator"]
+    RealWorldPos & TeamAssign --> Voronoi["Voronoi Space Control"]
+    RealWorldPos & TeamAssign --> Hull["Team Spacing (Convex Hull)"]
+    RealWorldPos & TeamAssign & BallPossess --> OpenSpace["Open Space & Defensive Gap"]
+    RealWorldPos & BallPossess --> PossTracker["Possession & Direction Tracker"]
+    
+    SpeedDist & Voronoi & Hull & OpenSpace & PossTracker --> Compositor["Pro Canvas Composer (1080x1350)"]
+    Compositor --> FinalOutput["Final Analytics Video"]
+```
+
+---
+
+## 📁 Project Structure
+
+```text
+CourtVision/
+├── analytics/                           # Advanced spatial analytics
+│   ├── __init__.py
+│   ├── open_space.py                   # Average gap to nearest defender
+│   ├── possession_tracker.py           # Possession & direction tracking + recap
+│   ├── team_spacing.py                 # Convex hull spacing in m²
+│   └── voronoi_space_control.py        # Voronoi space control partitioning
+├── configs/                            # Configuration constants & team defaults
+│   ├── __init__.py
+│   └── configs.py
+├── court_keypoint_detector/            # Keypoint detection on court lines
+│   ├── __init__.py
+│   └── court_keypoint_detector.py
+├── drawers/                            # Video rendering and overlay drawers
+│   ├── __init__.py
+│   ├── ball_tracks_drawer.py
+│   ├── court_key_points_drawer.py
+│   ├── frame_number_drawer.py
+│   ├── pass_and_interceptions_drawer.py
+│   ├── player_tracks_drawer.py
+│   ├── possession_recap_drawer.py      # Summary recap screen
+│   ├── pro_canvas_composer.py          # 1080x1350 layout compositor
+│   ├── pro_overlay_drawer.py           # Skeleton wireframe & speed badges
+│   ├── pro_tactical_drawer.py          # Dark full-court Voronoi drawer
+│   ├── speed_and_distance_drawer.py
+│   ├── stats_dashboard_drawer.py       # 4-card bottom stats dashboard
+│   ├── tactical_view_drawer.py
+│   ├── team_ball_control_drawer.py
+│   └── utils.py                        # Rounded rectangles, ellipses, triangles
+├── images/                             # Court reference graphics
+├── models/                             # Pretrained detector weights (.pt)
+│   ├── ball_detector_model.pt
+│   ├── court_keypoint_detector.pt
+│   └── player_detector.pt
+├── pass_and_interception_detector/     # Pass detection logic
+├── speed_and_distance_calculator/      # Metric distance & velocity estimation
+├── tactical_view_converter/            # Homography matrix transformation
+├── team_assigner/                      # Jersey color classification
+├── trackers/                           # YOLO + ByteTrack trackers
+│   ├── ball_tracker.py
+│   └── player_tracker.py
+├── utils/                              # Video I/O and caching utilities
+├── main.py                             # Main pipeline entry point
+├── requirements.txt                    # Python dependencies
+└── Dockerfile                          # Containerized environment
+```
+
+---
+
+## 🛠️ Installation & Setup
+
+### Prerequisites
+- Python 3.9, 3.10, 3.11, or 3.12
+- macOS, Linux, or Windows
+- FFmpeg (for video encoding/decoding)
+
+### 1. Clone the Repository
 ```bash
 git clone https://github.com/Swayam2932/CourtVision.git
 cd CourtVision
 ```
 
-All commands below assume you are running them from the `CourtVision` project root (the directory containing `main.py`).
+### 2. Set Up Virtual Environment
+```bash
+python3 -m venv nba
+source nba/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
 
-## 2. Download and place the model weights
-
-Create a `models` directory in the project root if it does not already exist. Download the three `.pt` files from Drive and put them directly inside that directory. The names must match exactly:
-
+### 3. Download Model Weights
+Download the pre-trained weights from the [CourtVision Model Weights Folder](https://drive.google.com/drive/folders/1GfzD-WVNPAB4aDNuNdy90bXJgHVy3NOH?usp=sharing) and place them in the `models/` directory:
 ```text
-CourtVision/
-├── main.py
-└── models/
-    ├── player_detector.pt
-    ├── ball_detector_model.pt
-    └── court_keypoint_detector.pt
+models/
+├── player_detector.pt
+├── ball_detector_model.pt
+└── court_keypoint_detector.pt
 ```
 
-The code loads these relative paths (configured in `configs/configs.py`):
+---
 
-| File | Used for |
-| --- | --- |
-| `models/player_detector.pt` | Player detection and tracking |
-| `models/ball_detector_model.pt` | Ball detection and tracking |
-| `models/court_keypoint_detector.pt` | Basketball court keypoint detection |
+## 🎬 Running the Pipeline
 
-If Drive downloads a ZIP, extract it and move/rename the files so that the three paths above exist. Do not put the files inside an extra nested directory such as `models/models/`.
-
-## 3. Add an input video
-
-Create `input_videos/` in the project root and put a video there, for example:
-
-```text
-CourtVision/
-├── input_videos/
-│   └── game.mp4
-├── models/
-│   ├── player_detector.pt
-│   ├── ball_detector_model.pt
-│   └── court_keypoint_detector.pt
-└── main.py
-```
-
-The input video can be stored elsewhere; just pass its path to the command. The `input_videos/` folder and videos are ignored by Git, so they will not appear after cloning unless you add them yourself.
-
-## 4. Install dependencies
-
-### macOS / Linux
-
+### 1. Professional Mode (Default - 1080×1350 Portrait)
+Process any basketball video to produce the full broadcast analytics layout:
 ```bash
-python3.9 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+python main.py input_videos/game.mp4 --output_video output_videos/game_analytics.mp4
 ```
 
-If `python3.9` is not installed, install Python 3.9 first. On Linux, you may also need FFmpeg and OpenCV system libraries. Docker is an alternative described below.
-
-### Windows PowerShell
-
-```powershell
-py -3.9 -m venv .venv
-.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
-
-## 5. Run the analysis
-
-From the repository root, run:
-
+### 2. Custom Team Names
+Specify custom team names for the legend, attacking pill, and recap screens:
 ```bash
-python main.py input_videos/game.mp4
+python main.py input_videos/game.mp4 \
+  --team1 "BOS CELTICS" \
+  --team2 "GSW WARRIORS" \
+  --output_video output_videos/finals_game.mp4
 ```
 
-The default output path is:
-
-```text
-output_videos/output_video.avi
-```
-
-You can choose another output filename/path:
-
+### 3. Legacy Mode (720p Landscape)
+To generate the original 720p landscape video with classic player circles and keypoints:
 ```bash
-python main.py input_videos/game.mp4 --output_video output_videos/game_analysis.avi
+python main.py input_videos/game.mp4 --legacy --output_video output_videos/legacy_output.avi
 ```
 
-The output directory is created automatically if needed. To see the command options:
+### CLI Arguments Reference
 
-```bash
-python main.py --help
-```
+| Argument | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `input_video` | Positional | *Required* | Path to source video file |
+| `--output_video` | String | `output_videos/pro_output_video.mp4` | Path for the annotated video |
+| `--stub_path` | String | `stubs` | Directory for caching tracking stubs |
+| `--team1` | String | `"PHI 76ERS"` | Display name for Team 1 |
+| `--team2` | String | `"IND PACERS"` | Display name for Team 2 |
+| `--legacy` | Flag | `False` | Run original 720p landscape layout |
 
-Arguments:
+---
 
-| Argument | Required | Default | Meaning |
-| --- | --- | --- | --- |
-| `input_video` | Yes | — | Path to the source video |
-| `--output_video` | No | `output_videos/output_video.avi` | Where to write the annotated video |
-| `--stub_path` | No | `stubs` | Directory for intermediate cached analysis files |
+## 🐳 Docker Support
 
-Example using a video outside the project folder:
-
-```bash
-python main.py /path/to/my_game.mp4 --output_video output_videos/my_game_analysis.avi
-```
-
-## Run with Docker
-
-Build the image from the project root:
-
+Build the Docker image:
 ```bash
 docker build -t courtvision .
 ```
 
-The Docker build excludes the large `models/` folder, so mount the downloaded weights, input video folder, and output folder when running the container:
-
+Run with your local model weights and video directories mounted:
 ```bash
-mkdir -p models input_videos output_videos
-# Put the video in input_videos/ and the three weight files in models/ first.
-
 docker run --rm \
   -v "$PWD/models:/app/models" \
   -v "$PWD/input_videos:/app/input_videos" \
   -v "$PWD/output_videos:/app/output_videos" \
-  courtvision input_videos/game.mp4 --output_video output_videos/game_analysis.avi
+  courtvision input_videos/game.mp4 --output_video output_videos/game_analytics.mp4
 ```
 
-The paths after `courtvision` are paths inside the container. The mounted folders make the weights and videos available inside it and keep the output on your host machine.
+---
 
-## What the output contains
+## ⚡ Caching with Stubs
 
-The pipeline overlays player track IDs and team colors, ball tracking, court keypoints, frame numbers, team ball control, pass/interception indicators, and player speed/distance information. It also draws a tactical court view showing mapped player positions.
+To accelerate development and prevent re-running heavy neural networks across iterations, the pipeline automatically caches intermediate outputs in `stubs/`:
+- `player_track_stubs.pkl`: Player bounding boxes and track IDs
+- `ball_track_stubs.pkl`: Basketball detections across frames
+- `court_key_points_stub.pkl`: Court landmark keypoints
+- `player_assignment_stub.pkl`: Team classifications
 
-## Intermediate cache files
+If stub files matching the input video's frame count are found in `stubs/`, the model inference phase is skipped and cached results are used immediately.
 
-The pipeline checks `stubs/` for cached player tracks, ball tracks, court keypoints, and team assignments. If a cache is missing or does not match the input video's frame count, that step runs again and writes a cache. The cache folder is generated locally and is not needed to start a fresh run. Do not reuse a cache from a different video unless you know it matches the video and frame count.
-
-## Project layout
-
-```text
-ball_aquisition/                  Ball possession estimation
-configs/                           Model, cache, and output paths
-court_keypoint_detector/          Court keypoint detection
-drawers/                            Video overlays and visualizations
-images/                            Court image and court dimension references
-input_videos/                      Your input videos (create this locally)
-models/                            Three required detector weights (download separately)
-output_videos/                     Generated annotated videos
-pass_and_interception_detector/   Pass and interception detection
-speed_and_distance_calculator/   Distance and speed estimation
-tactical_view_converter/          Court coordinate mapping
-team_assigner/                     Team assignment
-trackers/                          Player and ball tracking
-utils/                             Video and cache helpers
-main.py                            Command-line pipeline
-requirements.txt                   Python dependencies
-Dockerfile                         Docker image definition
-```
-
-## Notes
-
-- Run from the repository root because model and court image paths are relative to it.
-- The complete input video is loaded into memory. Start with a short clip if memory is limited.
-- CPU execution is supported but can take a long time; an available compatible GPU may speed up inference.
-- The first uncached run downloads `patrickjohncyh/fashion-clip` through Hugging Face Transformers for team color assignment.
-- `output_videos/`, `input_videos/`, and `stubs/` are ignored by Git. Keep your local input and result files backed up separately if needed.

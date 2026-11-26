@@ -1,7 +1,10 @@
 from ultralytics import YOLO
 import supervision as sv
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 import sys 
 sys.path.append('../')
 from utils import read_stub, save_stub
@@ -129,12 +132,29 @@ class BallTracker:
         Returns:
             list: List of ball positions with interpolated values filling the gaps.
         """
-        ball_positions = [x.get(1,{}).get('bbox',[]) for x in ball_positions]
-        df_ball_positions = pd.DataFrame(ball_positions,columns=['x1','y1','x2','y2'])
+        if pd is not None:
+            raw_boxes = [x.get(1,{}).get('bbox',[]) for x in ball_positions]
+            df_ball_positions = pd.DataFrame(raw_boxes,columns=['x1','y1','x2','y2'])
+            df_ball_positions = df_ball_positions.interpolate()
+            df_ball_positions = df_ball_positions.bfill()
+            return [{1: {"bbox":x}} for x in df_ball_positions.to_numpy().tolist()]
 
-        # Interpolate missing values
-        df_ball_positions = df_ball_positions.interpolate()
-        df_ball_positions = df_ball_positions.bfill()
+        # Robust pure numpy interpolation fallback
+        boxes = [x.get(1, {}).get('bbox', None) for x in ball_positions]
+        n = len(boxes)
+        if n == 0:
+            return ball_positions
 
-        ball_positions = [{1: {"bbox":x}} for x in df_ball_positions.to_numpy().tolist()]
-        return ball_positions
+        arr = np.full((n, 4), np.nan, dtype=np.float64)
+        for i, b in enumerate(boxes):
+            if b is not None and len(b) == 4:
+                arr[i] = b
+
+        for col in range(4):
+            valid_idx = np.where(~np.isnan(arr[:, col]))[0]
+            if len(valid_idx) > 0:
+                arr[:, col] = np.interp(np.arange(n), valid_idx, arr[valid_idx, col])
+            else:
+                arr[:, col] = 0.0
+
+        return [{1: {"bbox": arr[i].tolist()}} for i in range(n)]

@@ -1,6 +1,5 @@
 from PIL import Image
 import cv2
-from transformers import CLIPProcessor, CLIPModel
 
 import sys 
 sys.path.append('../')
@@ -40,6 +39,7 @@ class TeamAssigner:
         """
         Loads the pre-trained vision model for jersey color classification.
         """
+        from transformers import CLIPProcessor, CLIPModel
         self.model = CLIPModel.from_pretrained("patrickjohncyh/fashion-clip")
         self.processor = CLIPProcessor.from_pretrained("patrickjohncyh/fashion-clip")
 

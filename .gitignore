@@ -78,3 +78,8 @@ dist/
 
 # Model files
 models/
+
+# Temporary and local test media
+.tmp/
+*.mp4
+*.avi

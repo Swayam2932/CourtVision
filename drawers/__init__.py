@@ -6,3 +6,8 @@ from .frame_number_drawer import FrameNumberDrawer
 from .pass_and_interceptions_drawer import PassInterceptionDrawer
 from .tactical_view_drawer import TacticalViewDrawer
 from .speed_and_distance_drawer import SpeedAndDistanceDrawer
+from .pro_overlay_drawer import ProOverlayDrawer
+from .pro_tactical_drawer import ProTacticalDrawer
+from .stats_dashboard_drawer import StatsDashboardDrawer
+from .possession_recap_drawer import PossessionRecapDrawer
+from .pro_canvas_composer import ProCanvasComposer
